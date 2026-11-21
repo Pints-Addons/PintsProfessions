@@ -1,0 +1,29 @@
+Pint's Professions - Changelog
+
+v1.0.2
+- Item tooltips show what the item costs to craft - each reagent at the cheapest of your latest Pint's Auctions full
+  scan, a vendor, or making it yourself - with how old the scan is. Recipes show what the item they teach costs to
+  make. Hold Shift for the reagents. /pprof tooltip turns it off (or on).
+
+v1.0.1
+- WoW Forever: Cooking, First Aid, Enchanting and Mining plan with Forever's own recipes too - skill colours, reagents,
+  how each is learned and what it costs (from Wowhead's WoW Forever database), like Alchemy, Blacksmithing,
+  Engineering, Leatherworking and Tailoring already did.
+- WoW Forever: reagent vendor prices are Forever's (vials, water and spices cost more there).
+
+v1.0
+- First release: the cheapest way to level a profession at your auction house's prices (from Pint's Auctions
+  full scans), usable anywhere; extra for bad luck on yellow and green recipes; use up the mats in your bags
+  and bank first; Flip for profit (vendor and auction house); buy from the planner at the auction house.
+  Moved out of Pint's Auctions - your settings come with it.
+- Flip for profit: "Craft and sell (buy the mats)" lists recipes whose mats cost less than what the result sells
+  for at a vendor or the auction house (Sell crafts: Vendor / Auction house).
+- WoW Forever Tailoring: levelling guide and Flip use Forever's own recipes (skill colours, reagents, trainer and vendor
+  costs) from Wowhead's WoW Forever database; Classic/Season of Discovery tailoring recipes Forever lacks aren't suggested.
+- A "Pint's Professions" button under every profession window, beside Recipe Sources' Learnable: opens the levelling
+  guide for that profession (right-click: Flip for profit). It replaces the small Level guide button at the top.
+- Levelling guide: Tab moves between the From skill and to boxes, selecting what's there so you can type over it.
+- Levelling guide: "Build shopping list" puts what the plan needs from the auction house into a Pint's Auctions shopping
+  list ("Level Tailoring 177-200"), opened straight away at the auction house.
+- WoW Forever Alchemy, Blacksmithing, Engineering and Leatherworking: the levelling guide and Flip use Forever's own
+  recipes for these too (skill colours, reagents, trainer and vendor costs).

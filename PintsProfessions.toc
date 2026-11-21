@@ -1,0 +1,24 @@
+## Interface: 11508, 11509, 16001
+## Title: |cffd4a017Pint's|r Professions
+## Notes: The cheapest way to level any profession at your auction house's prices (from Pint's Auctions full scans), anywhere - not just at the auction house. Uses up the mats in your bags and bank first if you like. Plus Flip: what to craft or buy and sell for a profit. /pprof
+## Author: Jake (Pint's Add-ons, built with Claude)
+## Version: 1.0.2
+## X-Curse-Project-ID: 1821538
+## X-License: GPL-3.0
+## IconTexture: Interface\Icons\Trade_BlackSmithing
+## SavedVariables: PintsProfessionsDB
+## SavedVariablesPerCharacter: PintsProfessionsCharDB
+## OptionalDeps: PintsAuctions, PintsAlts, LibDBIcon-1.0
+
+Widgets.lua
+ProfData.lua
+ForeverTailoring_Prof.lua
+ForeverAlchemy_Prof.lua
+ForeverBlacksmithing_Prof.lua
+ForeverEngineering_Prof.lua
+ForeverLeatherworking_Prof.lua
+ForeverCooking_Prof.lua
+ForeverFirstAid_Prof.lua
+ForeverEnchanting_Prof.lua
+ForeverMining_Prof.lua
+Professions.lua
