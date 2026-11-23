@@ -340,7 +340,46 @@ local function Usable(line, sp, r, opt)
 	if Knows(line, sp) then return true, 0 end
 	if r[8] == "t" then return true, r[9] or 0 end
 	if r[8] == "v" and opt.vendorRecipes then return true, r[9] or 0 end
+	-- a drop or quest recipe someone's selling: what it went for at your last scan
+	if opt.ahRecipes and (r[10] or 0) > 0 then
+		local price = AHBuy(r[10])
+		if price and price > 0 then return true, price, "ah" end
+	end
 	return false
+end
+-- recipes the guide leaves out: ones you've right-clicked away, and cooldown recipes (Mooncloth, transmutes) unless asked
+local COOLDOWN = { [18560] = true }        -- Mooncloth (a 4-day cooldown on Forever)
+local function IsCooldown(sp) return COOLDOWN[sp] or ((GetSpellInfo(sp) or ""):find("^Transmute") and true) or false end
+P.IsCooldown = IsCooldown
+-- wow-professions.com's Forever guides (WowProfGuide.lua): recipes that need a Loom only a Tailoring 300 can make
+local WP = NS.WP
+local function NeedsStation(sp)
+	if not (WP and WP.station) then return false end
+	local n = GetSpellInfo(sp) or ""
+	for _, pat in ipairs(WP.station) do if n:find(pat) then return true end end
+	return false
+end
+local function Skipped(sp, opt)
+	if opt.skip and opt.skip[sp] then return true end
+	return opt.skipCD ~= false and (IsCooldown(sp) or NeedsStation(sp))
+end
+local function Starts(n, k) return n and k and n:sub(1, #k) == k end
+local function WPNote(n)
+	if not (WP and n) then return end
+	for k, v in pairs(WP.notes) do if Starts(n, k) then return v end end
+end
+-- their picks for skill a-b: does this recipe agree, and what they'd make there
+local function WPPicks(line, n, a, b)
+	local list = WP and WP.picks[line]
+	if not list then return end
+	local agree, names, seen = false, {}, {}
+	for _, pk in ipairs(list) do
+		if pk[1] < b and pk[2] > a then
+			if Starts(n, pk[3]) then agree = true end
+			if not seen[pk[3]] then seen[pk[3]] = true; names[#names + 1] = pk[3] .. " (" .. pk[1] .. "-" .. pk[2] .. ")" end
+		end
+	end
+	return agree, names
 end
 -- plan from skill `from` to `to`: steps { spell, from, to, crafts, cost }, shopping, totals
 -- use up `n` of an item from what you have; returns how many are still needed
@@ -364,13 +403,13 @@ function P.Plan(line, from, to, opt)
 	local total, train, back = 0, 0, 0
 	local cur
 	for s = from, to - 1 do
-		local best, bestEff, bestP, bestC, bestOne
+		local best, bestEff, bestP, bestC, bestOne, bestHow
 		for _, sp in ipairs(list) do
 			local r = PROF[sp]
 			local t = T(sp)
 			local p = Chance(t, s)
-			if p > 0 then
-				local ok, one = Usable(line, sp, r, opt)
+			if p > 0 and not Skipped(sp, opt) then
+				local ok, one, how = Usable(line, sp, r, opt)
 				if ok then
 					local c = CraftCost(sp, 0)
 					if c then
@@ -378,7 +417,7 @@ function P.Plan(line, from, to, opt)
 						one = learned[sp] and 0 or one
 						-- a recipe's training is spread over the levels it can still give points for
 						local eff = c / p + one / math.max(1, math.min(t[6], to) - s)
-						if not bestEff or eff < bestEff then best, bestEff, bestP, bestC, bestOne = sp, eff, p, c, one end
+						if not bestEff or eff < bestEff then best, bestEff, bestP, bestC, bestOne, bestHow = sp, eff, p, c, one, how end
 					end
 				end
 			end
@@ -401,7 +440,7 @@ function P.Plan(line, from, to, opt)
 			-- crafts for this point: on average 1 / chance, give or take (1 - chance) / chance^2 (bad luck adds up over a step)
 			local var = (1 - bestP) / (bestP * bestP)
 			if cur and cur.spell == best then cur.to = s + 1; cur.crafts = cur.crafts + 1 / bestP; cur.var = cur.var + var; cur.cost = cur.cost + bestC / bestP
-			else cur = { spell = best, from = s, to = s + 1, crafts = 1 / bestP, var = var, cost = bestC / bestP, unit = bestC, learn = bestOne }; steps[#steps + 1] = cur end
+			else cur = { spell = best, from = s, to = s + 1, crafts = 1 / bestP, var = var, cost = bestC / bestP, unit = bestC, learn = bestOne, how = bestHow }; steps[#steps + 1] = cur end
 		else
 			gaps[#gaps + 1] = s; cur = nil
 		end
@@ -515,6 +554,8 @@ local function Opt()
 	if o.flipBuyVendor == nil then o.flipBuyVendor = true end
 	if o.flipCraft == nil then o.flipCraft = true end
 	if o.safety == nil then o.safety = 85 end
+	if o.skipCD == nil then o.skipCD = true end
+	if o.ahRecipes == nil then o.ahRecipes = true end
 	return o
 end
 local function Check(parent, label, key, onChange, tip)
@@ -555,11 +596,16 @@ local function BuildLevel(p)
 		"Takes off what it sells for on the auction house instead, when that's more - only if the market holds.")
 	c2:SetPoint("LEFT", c1.label, "RIGHT", 14, -1)
 	local c3 = Check(p, "Vendor recipes", "vendorRecipes", function() p.OnOpen() end,
-		"Also use recipes you can buy from a vendor (their price counts). Drop and quest recipes are only used once you know them.")
+		"Also use recipes you can buy from a vendor (their price counts). Drop and quest recipes are used once you know them, "
+		.. "or (with Auction recipes) when one is for sale.")
 	c3:SetPoint("LEFT", c2.label, "RIGHT", 14, -1)
+	local c4 = Check(p, "Auction recipes", "ahRecipes", function() p.OnOpen() end,
+		"Also use drop and quest recipes someone is selling on the auction house (what the recipe went for at your last full "
+		.. "scan counts, like training does). The step says to buy the recipe there.")
+	c4:SetPoint("LEFT", c3.label, "RIGHT", 14, 0)
 	-- yellow and green recipes miss sometimes: buy enough that bad luck doesn't leave you short
 	local SAFE = { { 0, "Average only" }, { 85, "85% sure" }, { 95, "95% sure" } }
-	local safe = Btn(p, "", 150, 22); safe:SetPoint("LEFT", c3.label, "RIGHT", 16, 1)
+	local safe = Btn(p, "", 150, 22); safe:SetPoint("LEFT", c4.label, "RIGHT", 16, 1)
 	UI.Tip(safe, "Extra for bad luck", "Yellow and green recipes don't always give a point. Average only plans for typical luck (half the time you'd need more); "
 		.. "85% sure buys enough for all but about 1 run in 7; 95% sure for all but 1 in 20. The extra shows as (+n) in Times.")
 	safe:SetScript("OnClick", function()
@@ -572,8 +618,32 @@ local function BuildLevel(p)
 	local W = 480
 	local steps = List(p, W, 15, 18, {
 		{ 70, "LEFT", "Skill" }, { W - 300, "LEFT", "Craft" }, { 50, "RIGHT", "Times" }, { 90, "RIGHT", "Cost" }, { 70, "RIGHT", "Each point" },
-	}, function(item) if item.link and IsModifiedClick("CHATLINK") and ChatEdit_InsertLink then ChatEdit_InsertLink(item.link) end end)
+	}, function(item, b)
+		if item.link and IsModifiedClick("CHATLINK") and ChatEdit_InsertLink then ChatEdit_InsertLink(item.link); return end
+		if b == "RightButton" and item.spell then
+			o.skip = o.skip or {}; o.skip[item.spell] = true
+			Print("left out " .. SName(item.spell) .. " - the guide works it out again without it (Put back to undo).")
+			p.OnOpen(true)
+		end
+	end)
 	steps:SetPoint("TOPLEFT", 0, -92)
+	-- what's left out: right-clicked recipes (Put back returns them) and cooldown recipes
+	local back = Btn(p, "Put back", 120, 20); back:SetPoint("TOPLEFT", steps, "BOTTOMLEFT", 0, -4)
+	back:SetScript("OnClick", function() if o.skip then wipe(o.skip) end; p.OnOpen(true) end)
+	back:SetScript("OnEnter", function(self)
+		GameTooltip:SetOwner(self, "ANCHOR_TOP"); GameTooltip:AddLine("Recipes left out")
+		GameTooltip:AddLine("Right-click a step to leave its recipe out of the guide. Click here to put them all back.", 1, 1, 1, true)
+		local any
+		for sp, v in pairs(o.skip or {}) do if v then GameTooltip:AddLine("  " .. SName(sp), 0.8, 0.8, 0.8); any = true end end
+		if not any then GameTooltip:AddLine("  (none)", 0.6, 0.6, 0.6) end
+		GameTooltip:Show()
+	end)
+	back:SetScript("OnLeave", function() GameTooltip:Hide() end)
+	p.back = back
+	local cd = Check(p, "Leave out cooldown recipes", "skipCD", function() p.OnOpen(true) end,
+		"Mooncloth and transmutes can only be made once every few days, so the guide doesn't count on them. On WoW Forever "
+		.. "this also leaves out the Cenarion Circle tailoring patterns, which need a Loom only a Tailoring 300 can make.")
+	cd:SetPoint("LEFT", back, "RIGHT", 8, 0)
 	local SW = 288
 	local shop = List(p, SW, 15, 18, { { SW - 190, "LEFT", "Shopping list" }, { 42, "RIGHT", "Have" }, { 42, "RIGHT", "Buy" }, { 84, "RIGHT", "Cost" } },
 		function(item, b, row)
@@ -604,7 +674,7 @@ local function BuildLevel(p)
 	UI.Tip(view, "View shopping lists", "Your Pint's Auctions shopping lists, anywhere: what each wants, what you already have, add or take items off.")
 	UI.Tip(p.listBtn, "Build shopping list", "Puts what this plan needs from the auction house into a Pint's Auctions shopping list, named after the levels (\"Level Tailoring 177-200\"). At the auction house it opens straight away; otherwise find it on the Shopping tab. Building it again replaces it with the current plan."
 		.. " (Vendor reagents - thread, dyes - aren't on it: buy those from a trades supplier.)")
-	local total = Label(p, "", "GameFontHighlight"); total:SetPoint("TOPLEFT", steps, "BOTTOMLEFT", 4, -18); total:SetWidth(770); total:SetJustifyH("LEFT")
+	local total = Label(p, "", "GameFontHighlight"); total:SetPoint("TOPLEFT", steps, "BOTTOMLEFT", 4, -30); total:SetWidth(770); total:SetJustifyH("LEFT")
 	local note = Label(p, "Each step uses the cheapest way to earn every point at the prices from your last full scan: what the reagents cost "
 		.. "(bought, or made yourself when that's cheaper), less what you get back, divided by the chance of a point (yellow and green recipes miss "
 		.. "sometimes - the Times column allows for that). Training costs count once. It's worked out again after every full scan.", "GameFontDisableSmall")
@@ -658,13 +728,26 @@ local function BuildLevel(p)
 			if r[2] > 0 then name, link, tex = IName(r[2])
 			else name = "|cffffffff" .. SName(st.spell) .. "|r"; tex = select(3, GetSpellInfo(st.spell)) end
 			local learn = ""
-			if st.learn and st.learn > 0 then learn = "  |cff80c0ff(learn: " .. Money(st.learn) .. ")|r"
+			if st.learn and st.learn > 0 and st.how == "ah" then learn = "  |cffffd100(AH " .. (st.learn >= 10000 and (math.floor(st.learn / 10000 + 0.5) .. "g") or (math.floor(st.learn / 100 + 0.5) .. "s")) .. ")|r"
+			elseif st.learn and st.learn > 0 then learn = "  |cff80c0ff(learn: " .. Money(st.learn) .. ")|r"
 			elseif not Knows(line, st.spell) then learn = (r[8] == "v") and "  |cff80c0ff(vendor recipe)|r" or "  |cff80c0ff(trainer)|r" end
 			-- the colour it is when you start it
 			local t = T(st.spell)
+			local sn = SName(st.spell)
+			local agree, picks = WPPicks(line, sn, st.from, st.to)
+			local note = WPNote(sn)
+			local wpTip
+			if picks then
+				wpTip = (agree and "|cffffd100wow-professions.com picks this one too.|r" or "|cff80c0ffwow-professions.com makes:|r " .. (#picks > 0 and table.concat(picks, ", ") or "nothing listed here"))
+			end
+			if note then wpTip = (wpTip and (wpTip .. "\n") or "") .. "|cff80c0ff" .. note .. "|r" end
+			if st.how == "ah" and st.learn and st.learn > 0 then
+				wpTip = "|cffffd100Buy the recipe at the auction house: about " .. Money(st.learn) .. " at your last scan.|r" .. (wpTip and ("\n" .. wpTip) or "")
+			end
+			if agree then name = "|TInterface\\Common\\FavoritesIcon:14:14:0:0|t" .. name end
 			local col = (st.from < t[5] and "|cffff8040") or (st.from < (t[5] + t[6]) / 2 and "|cffffff00") or "|cff40bf40"
 			data[#data + 1] = { col .. st.from .. " - " .. st.to .. "|r", name .. learn, st.crafts .. (st.extra > 0 and (" |cff909090(+" .. st.extra .. ")|r") or ""), Money(math.max(0, st.cost)) .. (st.cost < 0 and " |cff40ff40profit|r" or ""),
-				Money(math.max(0, math.floor(st.cost / math.max(1, st.to - st.from)))), texture = tex, link = link, name = name,
+				Money(math.max(0, math.floor(st.cost / math.max(1, st.to - st.from)))), texture = tex, link = link, name = name, spell = st.spell, note = (wpTip and (wpTip .. "\n") or "") .. "|cff909090Right-click: leave this recipe out.|r",
 				tip = (not link) and SName(st.spell) or nil }
 		end
 		-- the training ranks you'll need on the way
@@ -677,6 +760,8 @@ local function BuildLevel(p)
 			end
 		end
 		steps:Set(data, p.keepNext)
+		local nskip = 0; for _, v in pairs(o.skip or {}) do if v then nskip = nskip + 1 end end
+		p.back:SetText(nskip > 0 and ("Put back (" .. nskip .. ")") or "Put back"); p.back:SetEnabled(nskip > 0)
 		local sd, buy, usedN, slots = {}, 0, 0, 0
 		local ids = {}
 		for id in pairs(plan.shop) do ids[id] = true end
@@ -713,6 +798,13 @@ local function BuildLevel(p)
 			if need > 0 and c and c[2] == "ah" then
 				local _, _, _, plain = IName(id)
 				if plain then p.buyList[#p.buyList + 1] = { plain, need } end
+			end
+		end
+		-- recipes to buy at the auction house go on the list too
+		for _, st in ipairs(plan.steps) do
+			if st.how == "ah" then
+				local _, _, _, plain = IName(PROF[st.spell][10])
+				if plain then p.buyList[#p.buyList + 1] = { plain, 1 } end
 			end
 		end
 		table.sort(p.buyList, function(a, b) return a[1] < b[1] end)

@@ -1,5 +1,17 @@
 Pint's Professions - Changelog
 
+v1.0.3
+- Levelling guide: right-click a step to leave that recipe out (the guide works it out again without it); Put back
+  returns them, and its tooltip lists what's left out.
+- Cooldown recipes (Mooncloth, transmutes) are left out of the levelling guide - untick Leave out cooldown recipes to
+  use them. On WoW Forever it also leaves out the Cenarion Circle patterns (Swarmtender's, Venomspew), which need a
+  Loom only a Tailoring 300 can make.
+- WoW Forever: the levelling guide checks itself against wow-professions.com's Forever guides - a star on steps they
+  pick too, and each step's tooltip says what they'd make there and where to learn the recipe (WowProfGuide.lua).
+- Levelling guide: Auction recipes (on by default) also uses drop and quest recipes that are for sale on the auction
+  house, counting what the recipe went for at your last full scan. The step shows (AH 12g) - its tooltip has the full price - and
+  Build shopping list adds it.
+
 v1.0.2
 - Item tooltips show what the item costs to craft - each reagent at the cheapest of your latest Pint's Auctions full
   scan, a vendor, or making it yourself - with how old the scan is. Recipes show what the item they teach costs to

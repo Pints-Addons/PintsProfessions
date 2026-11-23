@@ -2,7 +2,7 @@
 ## Title: |cffd4a017Pint's|r Professions
 ## Notes: The cheapest way to level any profession at your auction house's prices (from Pint's Auctions full scans), anywhere - not just at the auction house. Uses up the mats in your bags and bank first if you like. Plus Flip: what to craft or buy and sell for a profit. /pprof
 ## Author: Jake (Pint's Add-ons, built with Claude)
-## Version: 1.0.2
+## Version: 1.0.3
 ## X-Curse-Project-ID: 1821538
 ## X-License: GPL-3.0
 ## IconTexture: Interface\Icons\Trade_BlackSmithing
@@ -21,4 +21,5 @@ ForeverCooking_Prof.lua
 ForeverFirstAid_Prof.lua
 ForeverEnchanting_Prof.lua
 ForeverMining_Prof.lua
+WowProfGuide.lua
 Professions.lua

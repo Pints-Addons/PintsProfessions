@@ -105,6 +105,7 @@ local function List(parent, w, rows, rowH, cols, onClick, noIcon)
 			local it = self.item
 			if it and it.link then GameTooltip:SetOwner(self, "ANCHOR_RIGHT"); GameTooltip:SetHyperlink(it.link); GameTooltip:Show()
 			elseif it and it.tip then GameTooltip:SetOwner(self, "ANCHOR_RIGHT"); GameTooltip:AddLine(it.tip, 1, 1, 1, true); GameTooltip:Show() end
+			if it and it.note and GameTooltip:IsOwned(self) then GameTooltip:AddLine(" "); GameTooltip:AddLine(it.note, 1, 1, 1, true); GameTooltip:Show() end
 		end)
 		r:SetScript("OnLeave", function() GameTooltip:Hide() end)
 		f.rows[i] = r
