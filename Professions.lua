@@ -42,7 +42,12 @@ if type(issecretvalue) == "function" then
 	for id, p in pairs({ [159] = 25, [1179] = 125, [2320] = 10, [2321] = 100, [2324] = 25, [2325] = 1000, [2596] = 120, [2604] = 50, [2605] = 100, [2665] = false, [2678] = 10, [2692] = 40, [2880] = 100, [2894] = 50, [3371] = 20, [3372] = 200, [3466] = 2000, [3713] = 168, [3857] = 500, [4289] = 50, [4291] = 500, [4340] = 350, [4341] = 500, [4342] = 2500, [4399] = 200, [4400] = 2000, [4470] = 38, [4536] = 25, [6260] = 50, [6261] = 1000, [6530] = 100, [8343] = 2000, [8925] = 2500, [10290] = 2500, [10647] = 2000, [10648] = 500, [14341] = 5000, [17034] = 200, [17035] = 400, [17194] = 10, [17196] = 50, [18256] = 30000 }) do VENDOR[id] = p or nil end
 end
 
-local function RF() return (GetRealmName() or "?") .. " " .. (UnitFactionGroup("player") or "") end
+-- (Pint's Auctions' own realm key when it's loaded: it stands in for a realm WoW Forever hasn't named yet)
+local function RF()
+	local A = _G.PintsAuctions
+	if A and A.RF then return A.RF() end
+	return (GetRealmName() or "?") .. " " .. (UnitFactionGroup("player") or "")
+end
 -- this add-on's own saved data (skill-up colours seen, vendor prices, skill-up log); prices come from Pint's Auctions'
 local function DB()
 	PintsProfessionsDB = PintsProfessionsDB or {}

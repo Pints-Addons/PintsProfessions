@@ -1,5 +1,8 @@
 Pint's Professions - Changelog
 
+v1.0.4
+- Uses Pint's Auctions' shared realm key for prices, so every character reads the same scan.
+
 v1.0.3
 - Levelling guide: right-click a step to leave that recipe out (the guide works it out again without it); Put back
   returns them, and its tooltip lists what's left out.
